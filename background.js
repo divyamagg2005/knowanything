@@ -329,8 +329,6 @@ async function callGeminiAPI(messages, apiKey) {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     console.log('Context Chat Extension installed successfully!');
-    
-    chrome.runtime.openOptionsPage();
   }
 });
 
