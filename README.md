@@ -256,7 +256,7 @@ knowanything/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/context-chat-extension.git
+   git clone https://github.com/divyamagg2005/knowanything.git
    cd context-chat-extension
    ```
 
