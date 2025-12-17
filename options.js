@@ -46,7 +46,7 @@ async function saveSettings(apiKey) {
 }
 
 async function testApiKey(apiKey) {
-  const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   
   const testBody = {
     contents: [{

@@ -186,6 +186,20 @@
   </div>
   
   <div class="content">
+    <div class="section" id="api-setup-section">
+      <div class="section-title">⚙️ Setup</div>
+      <div class="info-card">
+        <h3>Gemini API Key</h3>
+        <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key" style="width: 100%; padding: 10px; border: 1px solid #e8e5e0; border-radius: 6px; font-size: 13px; margin: 8px 0; font-family: monospace;">
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button id="saveKeyBtn" class="cta-button" style="flex: 1;">💾 Save</button>
+          <button id="testKeyBtn" class="cta-button" style="flex: 1; background: linear-gradient(135deg, #6d5d4a 0%, #5a4d3e 100%);">🧪 Test</button>
+        </div>
+        <p id="keyStatus" style="margin-top: 8px; font-size: 12px; color: #666;"></p>
+        <p style="margin-top: 8px; font-size: 12px;">Don't have a key? <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #8b7355;">Get one free</a></p>
+      </div>
+    </div>
+    
     <div class="section">
       <div class="section-title">How to Use</div>
       <div class="info-card">
@@ -213,9 +227,9 @@
       </ul>
     </div>
     
-    <div class="status">
+    <div class="status" id="extensionStatus">
       <div class="status-dot"></div>
-      <span>Extension active and ready</span>
+      <span id="statusText">Checking configuration...</span>
     </div>
   </div>
   

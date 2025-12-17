@@ -4,7 +4,8 @@
  */
 
 // Gemini API Configuration
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // System instruction for Gemini (strict context adherence)
 const SYSTEM_INSTRUCTION = `You are an AI assistant that answers questions ONLY using the provided context. 
@@ -28,6 +29,53 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(response => sendResponse({ success: true, data: response }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep channel open for async response
+  }
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'context-chat',
+    title: 'Chat with Context Chat',
+    contexts: ['selection']
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'context-chat' && info.selectionText) {
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        type: 'SHOW_POPUP',
+        selectionText: info.selectionText
+      });
+    } catch (error) {
+      console.error('[Context Chat] Error sending message to content script:', error);
+      console.log('[Context Chat] Content script may not be loaded. Trying to inject...');
+      
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        
+        await chrome.scripting.insertCSS({
+          target: { tabId: tab.id },
+          files: ['styles/popup.css']
+        });
+        
+        setTimeout(async () => {
+          try {
+            await chrome.tabs.sendMessage(tab.id, {
+              type: 'SHOW_POPUP',
+              selectionText: info.selectionText
+            });
+          } catch (retryError) {
+            console.error('[Context Chat] Failed to show popup after injection:', retryError);
+          }
+        }, 100);
+      } catch (injectionError) {
+        console.error('[Context Chat] Failed to inject content script:', injectionError);
+      }
+    }
   }
 });
 

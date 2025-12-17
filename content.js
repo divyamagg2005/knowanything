@@ -15,9 +15,6 @@ const POPUP_OFFSET = 10;
  * Initialize the extension on page load
  */
 function init() {
-  // Listen for text selection
-  document.addEventListener('mouseup', handleTextSelection);
-  
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener(handleBackgroundMessage);
   
@@ -26,35 +23,51 @@ function init() {
 }
 
 /**
- * Handle text selection events
+ * Handle showing popup from context menu
  */
-function handleTextSelection(event) {
-  // Small delay to ensure selection is complete
-  setTimeout(() => {
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
+function handleShowPopup() {
+  console.log('[Context Chat] handleShowPopup called');
+  
+  const selection = window.getSelection();
+  const selectedText = selection.toString().trim();
+  
+  console.log('[Context Chat] Selected text:', selectedText);
+  
+  if (!selectedText || selectedText.length < MIN_SELECTION_LENGTH) {
+    console.log('[Context Chat] No valid selection found, selection length:', selectedText.length);
+    return;
+  }
+  
+  // Extract context
+  selectedContext = extractContext(selection);
+  
+  if (selectedContext) {
+    // Reset conversation for new selection
+    conversationHistory = [];
     
-    // Ignore small or empty selections
-    if (!selectedText || selectedText.length < MIN_SELECTION_LENGTH) {
-      return;
-    }
-    
-    // Ignore if clicking inside the popup
-    if (chatPopup && chatPopup.contains(event.target)) {
-      return;
-    }
-    
-    // Extract context
-    selectedContext = extractContext(selection);
-    
-    if (selectedContext) {
-      // Reset conversation for new selection
-      conversationHistory = [];
+    // Get selection position
+    try {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
       
-      // Show popup near selection
-      showPopup(event.clientX, event.clientY);
+      console.log('[Context Chat] Selection rect:', rect);
+      
+      // Show popup near selection center
+      const x = rect.left + (rect.width / 2);
+      const y = rect.bottom;
+      
+      console.log('[Context Chat] Showing popup at:', x, y);
+      showPopup(x, y);
+    } catch (error) {
+      console.error('[Context Chat] Error getting selection rect:', error);
+      // Fallback to center of screen
+      const x = window.innerWidth / 2;
+      const y = window.innerHeight / 2;
+      showPopup(x, y);
     }
-  }, 10);
+  } else {
+    console.log('[Context Chat] Failed to extract context');
+  }
 }
 
 /**
@@ -167,6 +180,8 @@ function getAfterContext(element) {
  * Create and show the floating popup
  */
 function showPopup(x, y) {
+  console.log('[Context Chat] showPopup called with x:', x, 'y:', y);
+  
   // Remove existing popup
   if (chatPopup) {
     chatPopup.remove();
@@ -175,6 +190,7 @@ function showPopup(x, y) {
   // Create popup container
   chatPopup = document.createElement('div');
   chatPopup.id = 'context-chat-popup';
+  console.log('[Context Chat] Created popup element');
   chatPopup.innerHTML = `
     <div class="chat-header">
       <div class="chat-header-title">
@@ -210,9 +226,11 @@ function showPopup(x, y) {
   `;
   
   document.body.appendChild(chatPopup);
+  console.log('[Context Chat] Popup appended to body');
   
   // Position the popup
   positionPopup(x, y);
+  console.log('[Context Chat] Popup positioned');
   
   // Add event listeners
   setupPopupListeners();
@@ -466,7 +484,12 @@ function handleOutsideClick(event) {
  * Handle messages from background script
  */
 function handleBackgroundMessage(message, sender, sendResponse) {
-  if (message.type === 'CLOSE_POPUP') {
+  console.log('[Context Chat] Received message:', message);
+  
+  if (message.type === 'SHOW_POPUP') {
+    handleShowPopup();
+    sendResponse({ success: true });
+  } else if (message.type === 'CLOSE_POPUP') {
     closePopup();
     sendResponse({ success: true });
   }

@@ -3,62 +3,149 @@
  * Handles extension popup interactions and settings
  */
 
+const apiKeyInput = document.getElementById('apiKeyInput');
+const saveKeyBtn = document.getElementById('saveKeyBtn');
+const testKeyBtn = document.getElementById('testKeyBtn');
+const keyStatus = document.getElementById('keyStatus');
+const statusText = document.getElementById('statusText');
+const extensionStatus = document.getElementById('extensionStatus');
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Check API key configuration
+  loadAPIKey();
   checkAPIKeyStatus();
-  
-  // Add event listeners for future features
   setupEventListeners();
 });
+
+/**
+ * Load saved API key
+ */
+async function loadAPIKey() {
+  try {
+    const result = await chrome.storage.local.get(['geminiApiKey']);
+    if (result.geminiApiKey) {
+      apiKeyInput.value = result.geminiApiKey;
+    }
+  } catch (error) {
+    console.error('Error loading API key:', error);
+  }
+}
 
 /**
  * Check if API key is configured
  */
 async function checkAPIKeyStatus() {
-  // This would check if API key is set in storage or background script
-  // For now, we'll assume it's configured
-  const statusElement = document.querySelector('.status');
+  try {
+    const result = await chrome.storage.local.get(['geminiApiKey']);
+    if (result.geminiApiKey && result.geminiApiKey !== 'YOUR_GEMINI_API_KEY_HERE') {
+      statusText.textContent = 'Extension active and ready';
+      extensionStatus.style.background = '#e8f5e9';
+      extensionStatus.style.borderColor = '#c8e6c9';
+      extensionStatus.style.color = '#2e7d32';
+    } else {
+      statusText.textContent = 'API key not configured';
+      extensionStatus.style.background = '#fff3e0';
+      extensionStatus.style.borderColor = '#ffe0b2';
+      extensionStatus.style.color = '#e65100';
+    }
+  } catch (error) {
+    console.error('Error checking API key:', error);
+  }
+}
+
+/**
+ * Save API key
+ */
+async function saveAPIKey() {
+  const apiKey = apiKeyInput.value.trim();
   
-  // You could implement API key storage in chrome.storage here
-  // and check its status
+  if (!apiKey) {
+    showKeyStatus('Please enter an API key', false);
+    return;
+  }
+
+  if (apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+    showKeyStatus('Please enter a valid API key', false);
+    return;
+  }
+
+  try {
+    await chrome.storage.local.set({ geminiApiKey: apiKey });
+    showKeyStatus('✓ API key saved successfully!', true);
+    checkAPIKeyStatus();
+  } catch (error) {
+    showKeyStatus('✗ Error saving API key', false);
+  }
+}
+
+/**
+ * Test API key
+ */
+async function testAPIKey() {
+  const apiKey = apiKeyInput.value.trim();
+  
+  if (!apiKey) {
+    showKeyStatus('Please enter an API key first', false);
+    return;
+  }
+
+  testKeyBtn.disabled = true;
+  testKeyBtn.textContent = '🔄 Testing...';
+  
+  const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  
+  const testBody = {
+    contents: [{
+      role: 'user',
+      parts: [{ text: 'Hello' }]
+    }],
+    generationConfig: {
+      maxOutputTokens: 10
+    }
+  };
+
+  try {
+    const response = await fetch(testUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testBody)
+    });
+
+    if (response.ok) {
+      showKeyStatus('✓ API key is valid and working!', true);
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || `API returned status ${response.status}`;
+      showKeyStatus(`✗ Test failed: ${errorMessage}`, false);
+    }
+  } catch (error) {
+    showKeyStatus('✗ Connection test failed', false);
+  } finally {
+    testKeyBtn.disabled = false;
+    testKeyBtn.textContent = '🧪 Test';
+  }
+}
+
+/**
+ * Show status message
+ */
+function showKeyStatus(message, isSuccess) {
+  keyStatus.textContent = message;
+  keyStatus.style.color = isSuccess ? '#2e7d32' : '#c62828';
+  keyStatus.style.fontWeight = '500';
 }
 
 /**
  * Setup event listeners for popup interactions
  */
 function setupEventListeners() {
-  // Future: Add settings, API key configuration, etc.
+  saveKeyBtn.addEventListener('click', saveAPIKey);
+  testKeyBtn.addEventListener('click', testAPIKey);
   
-  // Example: Open options page
-  const links = document.querySelectorAll('a[href="#options"]');
-  links.forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      chrome.runtime.openOptionsPage();
-    });
+  apiKeyInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      saveAPIKey();
+    }
   });
-}
-
-/**
- * Get extension statistics
- */
-async function getStats() {
-  try {
-    const stats = await chrome.storage.local.get(['totalChats', 'totalMessages']);
-    return {
-      totalChats: stats.totalChats || 0,
-      totalMessages: stats.totalMessages || 0
-    };
-  } catch (error) {
-    console.error('Error getting stats:', error);
-    return { totalChats: 0, totalMessages: 0 };
-  }
-}
-
-/**
- * Update statistics display
- */
-async function updateStatsDisplay() {
-  const stats = await getStats();
-  // Update UI with stats if elements exist
 }
