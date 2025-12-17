@@ -11,12 +11,13 @@ const GEMINI_API_URL =
 const SYSTEM_INSTRUCTION = `You are an AI assistant that answers questions ONLY using the provided context. 
 
 CRITICAL RULES:
-1. Base your answers EXCLUSIVELY on the provided context (selected text, surrounding paragraphs, and page information)
+1. Base your answers EXCLUSIVELY on the provided context (selected text, surrounding paragraphs, page information, and any images provided)
 2. If the answer cannot be derived from the context, respond with: "This information is not present in the selected text or its surrounding context."
 3. Do not use external knowledge or make assumptions beyond what's explicitly stated in the context
 4. Be concise and direct in your responses
 5. If the context is ambiguous, acknowledge the ambiguity
 6. When quoting, use the exact words from the context
+7. When images are provided, analyze them in relation to the selected text and context
 
 You are helpful, accurate, and honest about the limitations of the provided context.`;
 
@@ -83,7 +84,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
  * Handle chat message and get AI response
  */
 async function handleChatMessage(payload) {
-  const { message, context, conversationHistory } = payload;
+  const { message, context, conversationHistory, images } = payload;
   
   // Retrieve API key from storage
   const { geminiApiKey } = await chrome.storage.local.get(['geminiApiKey']);
@@ -97,7 +98,7 @@ async function handleChatMessage(payload) {
   const contextPrompt = buildContextPrompt(context);
   
   // Build conversation messages
-  const messages = buildConversationMessages(contextPrompt, conversationHistory, message);
+  const messages = buildConversationMessages(contextPrompt, conversationHistory, message, images);
   
   // Call Gemini API
   const response = await callGeminiAPI(messages, geminiApiKey);
@@ -137,7 +138,7 @@ function buildContextPrompt(context) {
 /**
  * Build conversation messages for Gemini API
  */
-function buildConversationMessages(contextPrompt, conversationHistory, userMessage) {
+function buildConversationMessages(contextPrompt, conversationHistory, userMessage, images = null) {
   const messages = [];
   
   // Add context as initial user message (only on first message)
@@ -156,16 +157,47 @@ function buildConversationMessages(contextPrompt, conversationHistory, userMessa
   
   // Add conversation history
   for (const msg of conversationHistory) {
+    const parts = [{ text: msg.content }];
+    
+    // Add images if present in history
+    if (msg.images && msg.images.length > 0) {
+      msg.images.forEach(imageData => {
+        const base64Data = imageData.split(',')[1];
+        const mimeType = imageData.match(/data:([^;]+);/)[1];
+        parts.push({
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Data
+          }
+        });
+      });
+    }
+    
     messages.push({
       role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
+      parts: parts
     });
   }
   
-  // Add current user message
+  // Add current user message with images if provided
+  const currentParts = [{ text: userMessage || 'Please analyze the provided image(s) in relation to the selected text.' }];
+  
+  if (images && images.length > 0) {
+    images.forEach(imageData => {
+      const base64Data = imageData.split(',')[1];
+      const mimeType = imageData.match(/data:([^;]+);/)[1];
+      currentParts.push({
+        inlineData: {
+          mimeType: mimeType,
+          data: base64Data
+        }
+      });
+    });
+  }
+  
   messages.push({
     role: 'user',
-    parts: [{ text: userMessage }]
+    parts: currentParts
   });
   
   return messages;
@@ -209,6 +241,10 @@ async function callGeminiAPI(messages, apiKey) {
   };
   
   try {
+    console.log('[Context Chat] Sending request to Gemini API...');
+    console.log('[Context Chat] Message count:', messages.length);
+    console.log('[Context Chat] Has images:', messages.some(m => m.parts?.some(p => p.inlineData)));
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -219,24 +255,41 @@ async function callGeminiAPI(messages, apiKey) {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Gemini API error:', errorData);
+      console.error('[Context Chat] Gemini API error:', errorData);
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
+    console.log('[Context Chat] API Response:', JSON.stringify(data, null, 2));
+    
+    // Check if response was blocked by safety filters
+    if (data.promptFeedback?.blockReason) {
+      console.error('[Context Chat] Prompt blocked:', data.promptFeedback.blockReason);
+      throw new Error(`Request blocked: ${data.promptFeedback.blockReason}`);
+    }
     
     // Extract response text
     if (data.candidates && data.candidates.length > 0) {
       const candidate = data.candidates[0];
+      
+      // Check if candidate was blocked
+      if (candidate.finishReason === 'SAFETY') {
+        console.error('[Context Chat] Response blocked by safety filters:', candidate.safetyRatings);
+        throw new Error('Response blocked by safety filters. Try rephrasing your question.');
+      }
+      
       if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-        return candidate.content.parts[0].text;
+        const responseText = candidate.content.parts[0].text;
+        console.log('[Context Chat] Response text length:', responseText?.length);
+        return responseText;
       }
     }
     
+    console.error('[Context Chat] No valid response in API data:', data);
     throw new Error('No response generated from API');
     
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
+    console.error('[Context Chat] Error calling Gemini API:', error);
     throw error;
   }
 }
