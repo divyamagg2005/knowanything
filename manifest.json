@@ -7,7 +7,8 @@
     "activeTab",
     "scripting",
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -20,7 +21,9 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "css": ["styles/popup.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true,
+      "match_about_blank": true
     }
   ],
   "icons": {

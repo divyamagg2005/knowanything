@@ -43,36 +43,65 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'context-chat' && info.selectionText) {
+    console.log('[Context Chat] Context menu clicked, tab ID:', tab.id);
+    
     try {
-      await chrome.tabs.sendMessage(tab.id, {
-        type: 'SHOW_POPUP',
-        selectionText: info.selectionText
-      });
+      // Send message to all frames (important for PDFs and iframes)
+      const frames = await chrome.webNavigation.getAllFrames({ tabId: tab.id });
+      console.log('[Context Chat] Found frames:', frames?.length || 0);
+      
+      let messagesSent = 0;
+      for (const frame of frames) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            type: 'SHOW_POPUP',
+            selectionText: info.selectionText
+          }, { frameId: frame.frameId });
+          messagesSent++;
+          console.log('[Context Chat] Message sent to frame:', frame.frameId);
+        } catch (frameError) {
+          console.log('[Context Chat] Frame', frame.frameId, 'not ready or no content script');
+        }
+      }
+      
+      if (messagesSent === 0) {
+        throw new Error('No frames responded');
+      }
     } catch (error) {
       console.error('[Context Chat] Error sending message to content script:', error);
       console.log('[Context Chat] Content script may not be loaded. Trying to inject...');
       
       try {
         await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
+          target: { tabId: tab.id, allFrames: true },
           files: ['content.js']
         });
         
         await chrome.scripting.insertCSS({
-          target: { tabId: tab.id },
+          target: { tabId: tab.id, allFrames: true },
           files: ['styles/popup.css']
         });
         
+        console.log('[Context Chat] Scripts injected, retrying...');
+        
         setTimeout(async () => {
           try {
-            await chrome.tabs.sendMessage(tab.id, {
-              type: 'SHOW_POPUP',
-              selectionText: info.selectionText
-            });
+            const frames = await chrome.webNavigation.getAllFrames({ tabId: tab.id });
+            for (const frame of frames) {
+              try {
+                await chrome.tabs.sendMessage(tab.id, {
+                  type: 'SHOW_POPUP',
+                  selectionText: info.selectionText
+                }, { frameId: frame.frameId });
+                console.log('[Context Chat] Retry: Message sent to frame:', frame.frameId);
+              } catch (frameError) {
+                console.log('[Context Chat] Retry: Frame', frame.frameId, 'still not ready');
+              }
+            }
           } catch (retryError) {
             console.error('[Context Chat] Failed to show popup after injection:', retryError);
           }
-        }, 100);
+        }, 200);
       } catch (injectionError) {
         console.error('[Context Chat] Failed to inject content script:', injectionError);
       }

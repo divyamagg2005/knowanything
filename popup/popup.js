@@ -9,6 +9,8 @@ const testKeyBtn = document.getElementById('testKeyBtn');
 const keyStatus = document.getElementById('keyStatus');
 const statusText = document.getElementById('statusText');
 const extensionStatus = document.getElementById('extensionStatus');
+const manualContextInput = document.getElementById('manualContextInput');
+const startChatBtn = document.getElementById('startChatBtn');
 
 document.addEventListener('DOMContentLoaded', () => {
   loadAPIKey();
@@ -137,11 +139,50 @@ function showKeyStatus(message, isSuccess) {
 }
 
 /**
+ * Start manual chat with custom context
+ */
+async function startManualChat() {
+  const contextText = manualContextInput.value.trim();
+  
+  if (!contextText) {
+    alert('Please paste some text to chat with');
+    return;
+  }
+  
+  const result = await chrome.storage.local.get(['geminiApiKey']);
+  if (!result.geminiApiKey || result.geminiApiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+    alert('Please configure your Gemini API key first');
+    return;
+  }
+  
+  chrome.storage.local.set({ 
+    manualContext: {
+      selectedText: contextText,
+      beforeContext: '',
+      afterContext: '',
+      pageTitle: 'Manual Context',
+      pageUrl: 'manual://context',
+      fullContext: contextText
+    }
+  });
+  
+  const chatWindowUrl = chrome.runtime.getURL('chat-window.html');
+  chrome.windows.create({
+    url: chatWindowUrl,
+    type: 'popup',
+    width: 450,
+    height: 650,
+    focused: true
+  });
+}
+
+/**
  * Setup event listeners for popup interactions
  */
 function setupEventListeners() {
   saveKeyBtn.addEventListener('click', saveAPIKey);
   testKeyBtn.addEventListener('click', testAPIKey);
+  startChatBtn.addEventListener('click', startManualChat);
   
   apiKeyInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
