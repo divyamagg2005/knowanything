@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Context Chat - AI Assistant",
+  "name": "KnowAnything - AI Assistant",
   "version": "1.0.0",
   "description": "Chat with selected text using AI. Privacy-first, context-aware assistance for any webpage.",
   "permissions": [

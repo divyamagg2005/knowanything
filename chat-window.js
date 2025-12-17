@@ -1,5 +1,5 @@
 /**
- * Chat Window Script - Manual Context Chat
+ * Chat Window Script - Manual KnowAnything Chat
  */
 
 let selectedContext = null;

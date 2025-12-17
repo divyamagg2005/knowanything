@@ -1,5 +1,5 @@
 /**
- * Popup Script - Context Chat Extension
+ * Popup Script - KnowAnything Extension
  * Handles extension popup interactions and settings
  */
 

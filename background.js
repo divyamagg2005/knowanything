@@ -1,5 +1,5 @@
 /**
- * Background Service Worker - Context Chat Extension
+ * Background Service Worker - KnowAnything Extension
  * Handles Gemini API calls and inter-component messaging
  */
 
@@ -36,19 +36,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: 'context-chat',
-    title: 'Chat with Context Chat',
+    title: 'Chat with KnowAnything',
     contexts: ['selection']
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'context-chat' && info.selectionText) {
-    console.log('[Context Chat] Context menu clicked, tab ID:', tab.id);
+    console.log('[KnowAnything] Context menu clicked, tab ID:', tab.id);
     
     try {
       // Send message to all frames (important for PDFs and iframes)
       const frames = await chrome.webNavigation.getAllFrames({ tabId: tab.id });
-      console.log('[Context Chat] Found frames:', frames?.length || 0);
+      console.log('[KnowAnything] Found frames:', frames?.length || 0);
       
       let messagesSent = 0;
       for (const frame of frames) {
@@ -58,9 +58,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             selectionText: info.selectionText
           }, { frameId: frame.frameId });
           messagesSent++;
-          console.log('[Context Chat] Message sent to frame:', frame.frameId);
+          console.log('[KnowAnything] Message sent to frame:', frame.frameId);
         } catch (frameError) {
-          console.log('[Context Chat] Frame', frame.frameId, 'not ready or no content script');
+          console.log('[KnowAnything] Frame', frame.frameId, 'not ready or no content script');
         }
       }
       
@@ -68,8 +68,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         throw new Error('No frames responded');
       }
     } catch (error) {
-      console.error('[Context Chat] Error sending message to content script:', error);
-      console.log('[Context Chat] Content script may not be loaded. Trying to inject...');
+      console.error('[KnowAnything] Error sending message to content script:', error);
+      console.log('[KnowAnything] Content script may not be loaded. Trying to inject...');
       
       try {
         await chrome.scripting.executeScript({
@@ -82,7 +82,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           files: ['styles/popup.css']
         });
         
-        console.log('[Context Chat] Scripts injected, retrying...');
+        console.log('[KnowAnything] Scripts injected, retrying...');
         
         setTimeout(async () => {
           try {
@@ -93,17 +93,17 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
                   type: 'SHOW_POPUP',
                   selectionText: info.selectionText
                 }, { frameId: frame.frameId });
-                console.log('[Context Chat] Retry: Message sent to frame:', frame.frameId);
+                console.log('[KnowAnything] Retry: Message sent to frame:', frame.frameId);
               } catch (frameError) {
-                console.log('[Context Chat] Retry: Frame', frame.frameId, 'still not ready');
+                console.log('[KnowAnything] Retry: Frame', frame.frameId, 'still not ready');
               }
             }
           } catch (retryError) {
-            console.error('[Context Chat] Failed to show popup after injection:', retryError);
+            console.error('[KnowAnything] Failed to show popup after injection:', retryError);
           }
         }, 200);
       } catch (injectionError) {
-        console.error('[Context Chat] Failed to inject content script:', injectionError);
+        console.error('[KnowAnything] Failed to inject content script:', injectionError);
       }
     }
   }
@@ -270,9 +270,9 @@ async function callGeminiAPI(messages, apiKey) {
   };
   
   try {
-    console.log('[Context Chat] Sending request to Gemini API...');
-    console.log('[Context Chat] Message count:', messages.length);
-    console.log('[Context Chat] Has images:', messages.some(m => m.parts?.some(p => p.inlineData)));
+    console.log('[KnowAnything] Sending request to Gemini API...');
+    console.log('[KnowAnything] Message count:', messages.length);
+    console.log('[KnowAnything] Has images:', messages.some(m => m.parts?.some(p => p.inlineData)));
     
     const response = await fetch(url, {
       method: 'POST',
@@ -284,16 +284,16 @@ async function callGeminiAPI(messages, apiKey) {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('[Context Chat] Gemini API error:', errorData);
+      console.error('[KnowAnything] Gemini API error:', errorData);
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log('[Context Chat] API Response:', JSON.stringify(data, null, 2));
+    console.log('[KnowAnything] API Response:', JSON.stringify(data, null, 2));
     
     // Check if response was blocked by safety filters
     if (data.promptFeedback?.blockReason) {
-      console.error('[Context Chat] Prompt blocked:', data.promptFeedback.blockReason);
+      console.error('[KnowAnything] Prompt blocked:', data.promptFeedback.blockReason);
       throw new Error(`Request blocked: ${data.promptFeedback.blockReason}`);
     }
     
@@ -303,22 +303,22 @@ async function callGeminiAPI(messages, apiKey) {
       
       // Check if candidate was blocked
       if (candidate.finishReason === 'SAFETY') {
-        console.error('[Context Chat] Response blocked by safety filters:', candidate.safetyRatings);
+        console.error('[KnowAnything] Response blocked by safety filters:', candidate.safetyRatings);
         throw new Error('Response blocked by safety filters. Try rephrasing your question.');
       }
       
       if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
         const responseText = candidate.content.parts[0].text;
-        console.log('[Context Chat] Response text length:', responseText?.length);
+        console.log('[KnowAnything] Response text length:', responseText?.length);
         return responseText;
       }
     }
     
-    console.error('[Context Chat] No valid response in API data:', data);
+    console.error('[KnowAnything] No valid response in API data:', data);
     throw new Error('No response generated from API');
     
   } catch (error) {
-    console.error('[Context Chat] Error calling Gemini API:', error);
+    console.error('[KnowAnything] Error calling Gemini API:', error);
     throw error;
   }
 }
@@ -328,8 +328,8 @@ async function callGeminiAPI(messages, apiKey) {
  */
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('Context Chat Extension installed successfully!');
+    console.log('KnowAnything Extension installed successfully!');
   }
 });
 
-console.log('Context Chat Extension background script loaded');
+console.log('KnowAnything Extension background script loaded');

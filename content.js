@@ -1,5 +1,5 @@
 /**
- * Content Script - Context Chat Extension
+ * Content Script - KnowAnything Extension
  * Handles text selection, context extraction, and floating popup UI
  */
 
@@ -28,15 +28,15 @@ function init() {
  * Handle showing popup from context menu
  */
 function handleShowPopup() {
-  console.log('[Context Chat] handleShowPopup called');
+  console.log('[KnowAnything] handleShowPopup called');
   
   const selection = window.getSelection();
   const selectedText = selection.toString().trim();
   
-  console.log('[Context Chat] Selected text:', selectedText);
+  console.log('[KnowAnything] Selected text:', selectedText);
   
   if (!selectedText || selectedText.length < MIN_SELECTION_LENGTH) {
-    console.log('[Context Chat] No valid selection found, selection length:', selectedText.length);
+    console.log('[KnowAnything] No valid selection found, selection length:', selectedText.length);
     return;
   }
   
@@ -52,23 +52,23 @@ function handleShowPopup() {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       
-      console.log('[Context Chat] Selection rect:', rect);
+      console.log('[KnowAnything] Selection rect:', rect);
       
       // Show popup near selection center
       const x = rect.left + (rect.width / 2);
       const y = rect.bottom;
       
-      console.log('[Context Chat] Showing popup at:', x, y);
+      console.log('[KnowAnything] Showing popup at:', x, y);
       showPopup(x, y);
     } catch (error) {
-      console.error('[Context Chat] Error getting selection rect:', error);
+      console.error('[KnowAnything] Error getting selection rect:', error);
       // Fallback to center of screen
       const x = window.innerWidth / 2;
       const y = window.innerHeight / 2;
       showPopup(x, y);
     }
   } else {
-    console.log('[Context Chat] Failed to extract context');
+    console.log('[KnowAnything] Failed to extract context');
   }
 }
 
@@ -182,7 +182,7 @@ function getAfterContext(element) {
  * Create and show the floating popup
  */
 function showPopup(x, y) {
-  console.log('[Context Chat] showPopup called with x:', x, 'y:', y);
+  console.log('[KnowAnything] showPopup called with x:', x, 'y:', y);
   
   // Remove existing popup
   if (chatPopup) {
@@ -192,14 +192,14 @@ function showPopup(x, y) {
   // Create popup container
   chatPopup = document.createElement('div');
   chatPopup.id = 'context-chat-popup';
-  console.log('[Context Chat] Created popup element');
+  console.log('[KnowAnything] Created popup element');
   chatPopup.innerHTML = `
     <div class="chat-header">
       <div class="chat-header-title">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        <span>Context Chat</span>
+        <span>KnowAnything</span>
       </div>
       <div class="chat-header-actions">
         <button class="maximize-btn" title="Toggle Side Panel">
@@ -248,11 +248,11 @@ function showPopup(x, y) {
   `;
   
   document.body.appendChild(chatPopup);
-  console.log('[Context Chat] Popup appended to body');
+  console.log('[KnowAnything] Popup appended to body');
   
   // Position the popup
   positionPopup(x, y);
-  console.log('[Context Chat] Popup positioned');
+  console.log('[KnowAnything] Popup positioned');
   
   // Add event listeners
   setupPopupListeners();
@@ -625,7 +625,7 @@ function handleOutsideClick(event) {
  * Handle messages from background script
  */
 function handleBackgroundMessage(message, sender, sendResponse) {
-  console.log('[Context Chat] Received message:', message);
+  console.log('[KnowAnything] Received message:', message);
   
   if (message.type === 'SHOW_POPUP') {
     handleShowPopup();

@@ -1,4 +1,4 @@
-# Context Chat - AI Assistant
+# KnowAnything - AI Assistant
 
 **Privacy-first, context-aware AI conversations for any webpage**
 
@@ -105,7 +105,7 @@ The extension will be available on the Chrome Web Store soon!
 #### Using the Context Menu
 1. Select text on any webpage
 2. Right-click the selection
-3. Choose "Chat with Context Chat"
+3. Choose "Chat with KnowAnything"
 4. The chat popup appears with your selection
 
 #### Side Panel Mode
@@ -123,7 +123,7 @@ The extension will be available on the Chrome Web Store soon!
    - Press `Ctrl+V` in the chat input
    - The image will be analyzed in relation to your selected text
 
-#### Manual Context Chat
+#### Manual KnowAnything
 1. Click the extension icon
 2. Scroll to "Quick Chat" section
 3. Paste text from PDFs or any source
